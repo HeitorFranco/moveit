@@ -1,5 +1,7 @@
 import { createContext, useEffect, useState } from "react";
 import challenges from "../../challenges.json";
+import Cookies from "js-cookie";
+import { LevelUpModal } from "../components/LevelUpModal";
 
 interface Challenge {
   type: "body" | "eye";
@@ -17,15 +19,31 @@ interface ChallengesContextData {
   resetChallenge: () => void;
   experienceToNextLevel: number;
   completeChallenge: () => void;
+  closeLevelUpModal: () => void;
 }
+
+interface ChallengesProviderProps {
+  level: number;
+  currentExperience: number;
+  challengesCompleted: number;
+}
+
 export const ChallengesContext = createContext({} as ChallengesContextData);
 
-export const ChallengesProvider: React.FC = ({ children }) => {
-  const [level, setLevel] = useState(1);
-  const [currentExperience, setCurrentExperience] = useState(0);
-  const [challengesCompleted, setChallengesCompleted] = useState(0);
+export const ChallengesProvider: React.FC<ChallengesProviderProps> = ({
+  children,
+  ...rest
+}) => {
+  const [level, setLevel] = useState(rest.level ?? 1);
+  const [currentExperience, setCurrentExperience] = useState(
+    rest.currentExperience ?? 0
+  );
+  const [challengesCompleted, setChallengesCompleted] = useState(
+    rest.challengesCompleted ?? 0
+  );
 
   const [activeChallenge, setActiveChallenge] = useState(null);
+  const [isLevelUpModalUp, setIsLevelUpModalUp] = useState(false);
 
   const experienceToNextLevel = Math.pow((level + 1) * 4, 2);
 
@@ -35,7 +53,18 @@ export const ChallengesProvider: React.FC = ({ children }) => {
 
   function levelUp() {
     setLevel(level + 1);
+    setIsLevelUpModalUp(true);
   }
+
+  function closeLevelUpModal() {
+    setIsLevelUpModalUp(false);
+  }
+
+  useEffect(() => {
+    Cookies.set("level", String(level));
+    Cookies.set("currentExperience", String(currentExperience));
+    Cookies.set("challengesCompleted", String(challengesCompleted));
+  }, [level, currentExperience, challengesCompleted]);
 
   function startNewChallenge() {
     const randomChallengesIndex = Math.floor(Math.random() * challenges.length);
@@ -86,9 +115,11 @@ export const ChallengesProvider: React.FC = ({ children }) => {
         resetChallenge,
         experienceToNextLevel,
         completeChallenge,
+        closeLevelUpModal,
       }}
     >
       {children}
+      {isLevelUpModalUp && <LevelUpModal />}
     </ChallengesContext.Provider>
   );
 };
